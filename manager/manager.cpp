@@ -160,6 +160,7 @@ void unlink_semaphores(bool detect_failed){
         sem_unlink(SEM_SOUTH) && sem_unlink(SEM_EAST)){
         if(detect_failed)perror("sem_unlink(3) failed");
     }
+
 }
 
 /************************************************************************
@@ -173,7 +174,7 @@ void unlink_semaphores(bool detect_failed){
 
 
 void create_name_semaphore(){
-    unlink_semaphores(false);
+    unlink_semaphores(true);
     // initialize basic semaphores
     /* We initialize the semaphore counter to 1 (INITIAL_VALUE) */
      sem_junction = sem_open(SEM_JUNCTION, O_CREAT | O_EXCL, SEM_PERMS, INITIAL_VALUE);
@@ -267,12 +268,7 @@ int main(int argc, const char * argv[]) {
     
     unlink_semaphores(true);
     
-    if (sem_close(sem_junction) < 0 && sem_close(sem_matrix) < 0 && sem_close(sem_north) < 0 && sem_close(sem_west) < 0 && sem_close(sem_south) < 0 && sem_close(sem_east) < 0) {
-        perror("sem_close(3) failed");
-        /* We ignore possible sem_unlink(3) errors here */
-        unlink_semaphores(false);
-        exit(EXIT_FAILURE);
-    }
+
     
     return 0;
 }

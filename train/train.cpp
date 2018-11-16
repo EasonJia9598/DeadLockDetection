@@ -218,22 +218,22 @@ int get_direction_semaphores(char char_dir){
     switch (char_dir) {
         case 'N':
             index = 0;
-            printf("get %d\n" , index);
+            printf("D get %d\n" , index);
             sem_direction = sem_open(SEM_NORTH, O_RDWR);
             break;
         case 'W':
             index = 1;
-            printf("get %d\n" , index);
+            printf("D get %d\n" , index);
             sem_direction = sem_open(SEM_WEST, O_RDWR);
             break;
         case 'S':
             index = 2;
-            printf("get %d\n" , index);
+            printf("D get %d\n" , index);
             sem_direction = sem_open(SEM_SOUTH, O_RDWR);
             break;
         case 'E':
             index = 3;
-            printf("get %d\n" , index);
+            printf("D get %d\n" , index);
             sem_direction = sem_open(SEM_EAST, O_RDWR);
             break;
         default:
@@ -249,22 +249,22 @@ int get_right_side_direction_semaphores( char char_dir){
     switch (char_dir) {
         case 'N':
             index = 0;
-            printf("get %d\n" , index);
+            printf("R get %d\n" , index);
             sem_right_side_direction = sem_open(SEM_NORTH, O_RDWR);
             break;
         case 'W':
             index = 1;
-            printf("get %d\n" , index);
+            printf("R get %d\n" , index);
             sem_right_side_direction = sem_open(SEM_WEST, O_RDWR);
             break;
         case 'S':
             index = 2;
-            printf("get %d\n" , index);
+            printf("R get %d\n" , index);
             sem_right_side_direction = sem_open(SEM_SOUTH, O_RDWR);
             break;
         case 'E':
             index = 3;
-            printf("get %d\n" , index);
+            printf("R get %d\n" , index);
             sem_right_side_direction = sem_open(SEM_EAST, O_RDWR);
             break;
         default:
@@ -292,7 +292,7 @@ void get_semaphores(){
     // get specific train semaphore and its right side semaphore
     index_direction = get_direction_semaphores(direction);
     
-    index_right_side_direction = get_direction_semaphores(right_side_direction);
+    index_right_side_direction = get_right_side_direction_semaphores(right_side_direction);
     
     if (sem_junction == SEM_FAILED ){
         perror("Child sem_open(sem_junction) failed");
