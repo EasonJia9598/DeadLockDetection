@@ -96,26 +96,6 @@ std::vector<std::string> &split(const std::string &s, char delim, std::vector<st
 }
 // https://stackoverflow.com/questions/275404/splitting-strings-in-c
 
-/************************************************************************
- 
- Function:        readContent
- 
- Description:     read content from file
- 
- *************************************************************************/
-
-string readContent(string filename){
-    string content;
-    string line;
-    ifstream myfile (filename);
-    if (myfile.is_open()) {
-        while (getline(myfile,line)) {
-            content.append(line);
-        }
-    }
-    myfile.close();
-    return content;
-}
 
 /************************************************************************
  
@@ -142,14 +122,38 @@ vector<int> arrayConvert(string content){
 
 /************************************************************************
  
+ Function:        readContent
+ 
+ Description:     read content from file
+ 
+ *************************************************************************/
+
+vector<vector<int>> readContent(string filename){
+    string content;
+    string line;
+    ifstream myfile (filename);
+    vector<vector<int>> array;
+    
+    if (myfile.is_open()) {
+        while (getline(myfile,line)) {
+            array.push_back(arrayConvert(line));
+        }
+    }
+    myfile.close();
+    return array;
+}
+
+
+/************************************************************************
+ 
  Function:        processFile
  
  Description:     read file and store in array
  
  *************************************************************************/
 
-vector<int> processFile(string filename){
-    return arrayConvert(readContent(filename));
+vector<vector<int>> processFile(string filename){
+    return readContent(filename);
 }
 
 /************************************************************************
@@ -189,12 +193,11 @@ void get_arguments(const char * argv[]){
  Description:     whole procedure of reading array
  
  *************************************************************************/
-vector<int> readingArray(){
+vector<vector<int>>  readingArray(){
     
     /* reading array */
-    vector<int> array;
 
-    array = processFile("/Users/WillJia/Desktop/IOS Lecture/Projects/DeadLockDetection/manager/matrix.txt");
+    vector<vector<int>> array = processFile("/Users/WillJia/Desktop/IOS Lecture/Projects/DeadLockDetection/manager/matrix.txt");
     
     return array;
 }
@@ -231,14 +234,48 @@ void get_semaphores(){
     // get specific train semaphore and its right side semaphore
     get_direction_semaphores(sem_direction , direction);
     get_direction_semaphores(sem_right_side_direction , right_side_direction);
+    
+    if (sem_junction == SEM_FAILED && sem_matrix == SEM_FAILED &&
+        sem_direction == SEM_FAILED && sem_right_side_direction == SEM_FAILED) {
+        perror("sem_open(3) failed");
+        exit(EXIT_FAILURE);
+    }
 }
+/************************************************************************
+ 
+ Function:        print_matrix
+ 
+ Description:     print_matrix
+ 
+ *************************************************************************/
+void print_matrix(vector<vector<int>> matrix){
+    
+    for (int i = 0; i < matrix.size(); i++)
+    {
+        for (int j = 0; j < matrix[i].size(); j++)
+        {
+            cout << matrix[i][j];
+        }
+    }
+}
+
+/************************************************************************
+ 
+ Function:        main
+ 
+ Description:     get_semaphores
+ 
+ *************************************************************************/
 int main(int argc, const char * argv[]) {
     
     
     srand((int)time(NULL));
     
-    //Done : change array to vector<int>
-    vector<int> array = readingArray();
+    //Done : change matrix to vector<int>
+    vector<vector<int>> matrix = readingArray();
+    
+    print_matrix(matrix);
+    
     get_arguments(argv);
     
     //get semaphores
