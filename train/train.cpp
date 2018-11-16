@@ -372,8 +372,9 @@ void close_output_file(){
 void update_matrix(int i ,int j , int value){
     
     sem_wait(sem_matrix);
-    matrix[i][j] = value;
     
+    readingArray();
+    matrix[i][j] = value;
     open_output_file(matrix_file_path);
     for (int i = 0; i < matrix.size(); i++) {
         for (int j = 0; j < matrix[i].size(); j++) {
@@ -384,6 +385,7 @@ void update_matrix(int i ,int j , int value){
     
     close_output_file();
     
+    print_matrix(matrix);
     sem_post(sem_matrix);
     
 }
@@ -399,7 +401,7 @@ int main(int argc, const char * argv[]) {
     srand((int)time(NULL));
     
     //Done : change matrix to vector<int>
-    matrix = readingArray();
+    readingArray();
     
     
     get_arguments(argv);
@@ -412,18 +414,21 @@ int main(int argc, const char * argv[]) {
     
     // request for direction lock
     printf("Train<pid%d>: requests for %s \n", ID, lock_info[index_direction].c_str());
-    
     update_matrix(ID - 1, index_direction, 1);
     
     sem_wait(sem_direction);
+    // acquire for direction lock
     printf("Train<pid%d>: acquires for %s\n", ID, lock_info[index_direction].c_str());
     update_matrix(ID - 1, index_direction, 2);
     
-    print_matrix(matrix);
 
     // request for right side lock
     printf("Train<pid%d>: requests for %s \n", ID, lock_info[index_right_side_direction].c_str());
+    update_matrix(ID - 1, index_right_side_direction, 1);
+    
+    // acquire for direction lock
     sem_wait(sem_right_side_direction);
+    update_matrix(ID - 1, index_right_side_direction, 2);
     printf("Train<pid%d>: acquires for %s\n", ID, lock_info[index_right_side_direction].c_str());
     
     // request for junction lock
@@ -440,11 +445,12 @@ int main(int argc, const char * argv[]) {
     // release direction lock
     printf("Train<pid%d>: releases %s\n", ID, lock_info[index_direction].c_str());
     sem_post(sem_direction);
-    
+    update_matrix(ID - 1, index_direction, 0);
+
     // release right side direction lock
     printf("Train<pid%d>: releases %s\n", ID, lock_info[index_right_side_direction].c_str());
     sem_post(sem_right_side_direction);
-    
+    update_matrix(ID - 1, index_right_side_direction, 0);
     
     
     

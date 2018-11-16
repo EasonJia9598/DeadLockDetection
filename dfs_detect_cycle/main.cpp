@@ -59,10 +59,8 @@ void showCycle() {
         double weight = 0.0;
         while(!cycle[i].empty()) {
             tuple<int, int, double> f = cycle[i].top();
-            if (get<2>(f) == 1) {
-                cout << get<0>(f) << "->" << get<1>(f) << " " << get<2>(f) << endl;
-                weight += get<2>(f);
-            }
+            cout << get<0>(f) << "->" << get<1>(f) << " " << get<2>(f) << endl;
+            weight += get<2>(f);
             cycle[i].pop();
         }
         cout << "weight = " << weight << endl << endl;
@@ -71,14 +69,45 @@ void showCycle() {
 
 
 void readData() {
-    cin >> V >> E;
-    for(int i = 0 ; i < E ;i++)
-    {
-        int v, w;
-        double weight;
-        cin >> v >> w >> weight;
-        EWD[v].push_back(make_tuple(v, w, weight));
+    V = 16;
+    int N = 12, M = 4;
+//    int array[4][4] = {
+//        {2 , 1 , 0 ,0 } ,
+//        {0,2,1,0},
+//        {0,0,2,1},
+//        {1,0,0,2}
+//    };
+    
+    int array[12][4] = {
+        {1,0,0,0},
+        {0,1,0,0},
+        {0,0,0,1},
+        {0,0,1,0},
+        {1,0,0,0},
+        {0,1,0,0},
+        {0,0,0,1},
+        {0,0,1,0},
+        {1,0,0,0},
+        {0,1,0,0},
+        {0,0,0,1},
+        {0,0,1,0}
+        
+    };
+    
+    for(int i = 0 ; i < N ; i++){
+        for (int j = 0;j < M ;j++) {
+            if (array[i][j] == 2) {
+                //                printf("j %d -> i %d\n" , j , i + 4 );
+                EWD[j].push_back(make_tuple(j, i+4, 1));
+                E++;
+            }else if (array[i][j] == 1) {
+                //                printf("i %d -> j %d\n" , i + 4 , j );
+                EWD[i+4].push_back(make_tuple(i+4, j, 1));
+                E++;
+            }
+        }
     }
+    
 }
 
 void showData() {
@@ -87,11 +116,11 @@ void showData() {
     {
         cout << v << " : ";
         for(vector<tuple<int, int, double>>::iterator ii = EWD[v].begin(); ii != EWD[v].end(); ii++)
-            cout << get<0>(*ii) << "->" << get<1>(*ii) << " " << get<2>(*ii) << "  ";
+            cout << get<0>(*ii) << "->" << get<1>(*ii) << " " << get<2>(*ii) << " ";
         cout << endl;
     }
     
-//    system("pause");
+    system("pause");
 }
 
 int main()
@@ -102,4 +131,3 @@ int main()
     showCycle();
     
 }
-

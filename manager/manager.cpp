@@ -162,14 +162,6 @@ void unlink_semaphores(bool detect_failed){
         if(detect_failed)perror("sem_unlink(3) failed");
     }
     
-    /* Close the semaphore as we won't be using it in the parent process */
-    if (sem_close(sem_junction) < 0 && sem_close(sem_matrix) < 0 && sem_close(sem_north) < 0 && sem_close(sem_west) < 0 && sem_close(sem_south) < 0 && sem_close(sem_east) < 0) {
-        perror("sem_close(3) failed");
-        /* We ignore possible sem_unlink(3) errors here */
-        unlink_semaphores(false);
-        exit(EXIT_FAILURE);
-    }
-    
 }
 
 /************************************************************************
@@ -213,6 +205,13 @@ void create_name_semaphore(){
 
 int main(int argc, const char * argv[]) {
     
+    /* Close the semaphore as we won't be using it in the parent process */
+    if (sem_close(sem_junction) < 0 && sem_close(sem_matrix) < 0 && sem_close(sem_north) < 0 && sem_close(sem_west) < 0 && sem_close(sem_south) < 0 && sem_close(sem_east) < 0) {
+        perror("sem_close(3) failed");
+        /* We ignore possible sem_unlink(3) errors here */
+        unlink_semaphores(false);
+        exit(EXIT_FAILURE);
+    }
     
     // Read data from sequence.txt file
     string sequence_list = read_sequence_file(sequence_file_path);
