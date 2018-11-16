@@ -21,14 +21,17 @@
 #include <array>
 #include <ctime>
 #include <semaphore.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 // Define named semaphore
-#define SEM_JUNCTION "../manager/semaphore_junction"
-#define SEM_READ_MATRIX "../manager/semaphore_read_matrix"
-#define SEM_NORTH "../manager/semaphore_north"
-#define SEM_WEST "../manager/semaphore_west"
-#define SEM_SOUTH "../manager/semaphore_south"
-#define SEM_EAST "../manager/semaphore_east"
+#define SEM_JUNCTION "/semaphore_junction"
+#define SEM_READ_MATRIX "/semaphore_read_matrix"
+#define SEM_NORTH "/semaphore_north"
+#define SEM_WEST "/semaphore_west"
+#define SEM_SOUTH "/semaphore_south"
+#define SEM_EAST "/semaphore_east"
 
 
 
@@ -46,6 +49,13 @@ char right_side_direction;
 char all_dir[4] = {'N' , 'W' , 'S' , 'E'};
 // corresponding right side
 // (index + 1) % 4
+// train info
+string train_info[4] = {"North Train" , "West Train" , "South Train" , "East Train"};
+// lock info
+string lock_info[4] = {"North_Lock" , "West_Lock" , "South_Lock" , "East_Lock"};
+// train index
+int index_direction = 0;
+int index_right_side_direction = 0;
 
 // get semaphores
 sem_t *sem_junction;
@@ -183,7 +193,7 @@ void get_arguments(const char * argv[]){
     ID = atoi(argv[0]);
     direction = argv[1][0];
     right_side_direction = get_right_side_direction();
-
+    
 }
 
 /************************************************************************
@@ -196,29 +206,75 @@ void get_arguments(const char * argv[]){
 vector<vector<int>>  readingArray(){
     
     /* reading array */
-
+    
     vector<vector<int>> array = processFile("/Users/WillJia/Documents/DeadLockDetection/manager/matrix.txt");
     
     return array;
 }
 
-void get_direction_semaphores(sem_t *sem_dir , char char_dir){
+
+int get_direction_semaphores(char char_dir){
+    int index = 0;
     switch (char_dir) {
         case 'N':
-            sem_dir = sem_open(SEM_NORTH, O_RDWR);
+            index = 0;
+            printf("get %d\n" , index);
+            sem_direction = sem_open(SEM_NORTH, O_RDWR);
             break;
         case 'W':
-            sem_dir = sem_open(SEM_WEST, O_RDWR);
+            index = 1;
+            printf("get %d\n" , index);
+            sem_direction = sem_open(SEM_WEST, O_RDWR);
             break;
         case 'S':
-            sem_dir = sem_open(SEM_SOUTH, O_RDWR);
+            index = 2;
+            printf("get %d\n" , index);
+            sem_direction = sem_open(SEM_SOUTH, O_RDWR);
             break;
         case 'E':
-            sem_dir = sem_open(SEM_EAST, O_RDWR);
+            index = 3;
+            printf("get %d\n" , index);
+            sem_direction = sem_open(SEM_EAST, O_RDWR);
+            break;
+        default:
+            cout << "wrong!!!" << endl;
             break;
     }
     
+    return index;
 }
+
+int get_right_side_direction_semaphores( char char_dir){
+    int index = 0;
+    switch (char_dir) {
+        case 'N':
+            index = 0;
+            printf("get %d\n" , index);
+            sem_right_side_direction = sem_open(SEM_NORTH, O_RDWR);
+            break;
+        case 'W':
+            index = 1;
+            printf("get %d\n" , index);
+            sem_right_side_direction = sem_open(SEM_WEST, O_RDWR);
+            break;
+        case 'S':
+            index = 2;
+            printf("get %d\n" , index);
+            sem_right_side_direction = sem_open(SEM_SOUTH, O_RDWR);
+            break;
+        case 'E':
+            index = 3;
+            printf("get %d\n" , index);
+            sem_right_side_direction = sem_open(SEM_EAST, O_RDWR);
+            break;
+        default:
+            cout << "wrong!!!" << endl;
+            break;
+    }
+    
+    return index;
+}
+
 /************************************************************************
  
  Function:        get_semaphores
@@ -229,17 +285,33 @@ void get_direction_semaphores(sem_t *sem_dir , char char_dir){
 void get_semaphores(){
     // get 4 semaphores
     // get junction and matrix semaphore
+//    sem_junction = sem_open(SEM_JUNCTION, O_RDWR);
     sem_junction = sem_open(SEM_JUNCTION, O_RDWR);
     sem_matrix = sem_open(SEM_READ_MATRIX,O_RDWR);
-    // get specific train semaphore and its right side semaphore
-    get_direction_semaphores(sem_direction , direction);
-    get_direction_semaphores(sem_right_side_direction , right_side_direction);
     
-    if (sem_junction == SEM_FAILED && sem_matrix == SEM_FAILED &&
-        sem_direction == SEM_FAILED && sem_right_side_direction == SEM_FAILED) {
-        perror("sem_open(3) failed");
+    // get specific train semaphore and its right side semaphore
+    index_direction = get_direction_semaphores(direction);
+    
+    index_right_side_direction = get_direction_semaphores(right_side_direction);
+    
+    if (sem_junction == SEM_FAILED ){
+        perror("Child sem_open(sem_junction) failed");
+        exit(EXIT_FAILURE);
+        
+    }
+    if (sem_matrix == SEM_FAILED ){
+        perror("Child sem_open(sem_matrix) failed");
         exit(EXIT_FAILURE);
     }
+    if (sem_direction == SEM_FAILED ){
+        perror("Child sem_open(sem_direction) failed");
+        exit(EXIT_FAILURE);
+    }
+    if (sem_right_side_direction == SEM_FAILED ){
+        perror("Child sem_open(sem_right_side_direction) failed");
+        exit(EXIT_FAILURE);
+    }
+    
 }
 /************************************************************************
  
@@ -249,16 +321,16 @@ void get_semaphores(){
  
  *************************************************************************/
 void print_matrix(vector<vector<int>> matrix){
-    cout << "Train<pid" << ID << ">:" << endl;
-    cout << "Direction train : " << direction << endl;
-    cout << "Right Side Direction train : " << right_side_direction << endl;
+    printf("Train<pid%d>:\n" , ID);
+    printf("Direction train: %c\n" , direction);
+    printf("Right Side Direction train: %c\n", right_side_direction);
     for (int i = 0; i < matrix.size(); i++)
     {
         for (int j = 0; j < matrix[i].size(); j++)
         {
-            cout << matrix[i][j] << " ";
+            printf("%d ",  matrix[i][j]);
         }
-        cout << endl;
+        printf("\n");
     }
 }
 
@@ -271,7 +343,6 @@ void print_matrix(vector<vector<int>> matrix){
  *************************************************************************/
 int main(int argc, const char * argv[]) {
     
-    
     srand((int)time(NULL));
     
     //Done : change matrix to vector<int>
@@ -280,10 +351,40 @@ int main(int argc, const char * argv[]) {
     
     get_arguments(argv);
     
-    print_matrix(matrix);
-
     //get semaphores
-//    get_semaphores();
+    get_semaphores();
+    
+    // waits direction semaphore
+    printf("Train<pid%d>: %s Started\n" , ID, train_info[index_direction].c_str());
+    // request for direction lock
+    printf("Train<pid%d>: requests for %s \n", ID, lock_info[index_direction].c_str());
+    sem_wait(sem_direction);
+    printf("Train<pid%d>: acquires for %s\n", ID, lock_info[index_direction].c_str());
+    
+    // request for right side lock
+    printf("Train<pid%d>: requests for %s \n", ID, lock_info[index_right_side_direction].c_str());
+    sem_wait(sem_right_side_direction);
+    printf("Train<pid%d>: acquires for %s\n", ID, lock_info[index_right_side_direction].c_str());
+    
+    // request for junction lock
+    printf("Train<pid%d>: requests Junction_Lock\n", ID);
+    sem_wait(sem_junction);
+    printf("Train<pid%d>: Acquires Junction_Lock; Passing Junction\n", ID);
+    sleep(3);
+    
+    
+    // release junction lock
+    printf("Train<pid%d>: releases Junction_Lock\n", ID);
+    sem_post(sem_junction);
+    
+    // release direction lock
+    printf("Train<pid%d>: releases %s\n", ID, lock_info[index_direction].c_str());
+    sem_post(sem_direction);
+    
+    // release right side direction lock
+    printf("Train<pid%d>: releases %s\n", ID, lock_info[index_right_side_direction].c_str());
+    sem_post(sem_right_side_direction);
+    
     
     
     

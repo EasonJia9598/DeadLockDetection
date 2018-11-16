@@ -49,7 +49,9 @@ using namespace std;
 #define SEM_PERMS (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP)
 #define INITIAL_VALUE 1
 
+//string CHILD_PROGRAM = "./train";
 string CHILD_PROGRAM = "/Users/WillJia/Documents/DeadLockDetection/train/train";
+
 
 // nxm matrix
 #define M 4
@@ -66,6 +68,13 @@ string sequence_file_path = "/Users/WillJia/Documents/DeadLockDetection/manager/
 // matrix file name
 string matrix_file_path = "/Users/WillJia/Documents/DeadLockDetection/manager/matrix.txt";
 
+// declare sem_t
+sem_t *sem_junction;
+sem_t *sem_matrix;
+sem_t *sem_north;
+sem_t *sem_west;
+sem_t *sem_south;
+sem_t *sem_east;
 
 /************************************************************************
  
@@ -146,9 +155,9 @@ void initialize_matrix(){
  
  *************************************************************************/
 void unlink_semaphores(bool detect_failed){
-    if (sem_unlink(SEM_JUNCTION)&& sem_unlink(SEM_READ_MATRIX)&&
-        sem_unlink(SEM_NORTH)&& sem_unlink(SEM_WEST)&&
-        sem_unlink(SEM_SOUTH)&& sem_unlink(SEM_EAST)){
+    if (sem_unlink(SEM_JUNCTION) && sem_unlink(SEM_READ_MATRIX) &&
+        sem_unlink(SEM_NORTH) && sem_unlink(SEM_WEST) &&
+        sem_unlink(SEM_SOUTH) && sem_unlink(SEM_EAST)){
         if(detect_failed)perror("sem_unlink(3) failed");
     }
 }
@@ -161,15 +170,18 @@ void unlink_semaphores(bool detect_failed){
  
  *************************************************************************/
 
+
+
 void create_name_semaphore(){
+    unlink_semaphores(false);
     // initialize basic semaphores
     /* We initialize the semaphore counter to 1 (INITIAL_VALUE) */
-    sem_t *sem_junction = sem_open(SEM_JUNCTION, O_CREAT | O_EXCL, SEM_PERMS, INITIAL_VALUE);
-    sem_t *sem_matrix = sem_open(SEM_READ_MATRIX, O_CREAT | O_EXCL, SEM_PERMS, INITIAL_VALUE);
-    sem_t *sem_north = sem_open(SEM_NORTH, O_CREAT | O_EXCL, SEM_PERMS, INITIAL_VALUE);
-    sem_t *sem_west = sem_open(SEM_WEST, O_CREAT | O_EXCL, SEM_PERMS, INITIAL_VALUE);
-    sem_t *sem_south = sem_open(SEM_SOUTH, O_CREAT | O_EXCL, SEM_PERMS, INITIAL_VALUE);
-    sem_t *sem_east = sem_open(SEM_EAST, O_CREAT | O_EXCL, SEM_PERMS, INITIAL_VALUE);
+     sem_junction = sem_open(SEM_JUNCTION, O_CREAT | O_EXCL, SEM_PERMS, INITIAL_VALUE);
+     sem_matrix = sem_open(SEM_READ_MATRIX, O_CREAT | O_EXCL, SEM_PERMS, INITIAL_VALUE);
+     sem_north = sem_open(SEM_NORTH, O_CREAT | O_EXCL, SEM_PERMS, INITIAL_VALUE);
+     sem_west = sem_open(SEM_WEST, O_CREAT | O_EXCL, SEM_PERMS, INITIAL_VALUE);
+     sem_south = sem_open(SEM_SOUTH, O_CREAT | O_EXCL, SEM_PERMS, INITIAL_VALUE);
+     sem_east = sem_open(SEM_EAST, O_CREAT | O_EXCL, SEM_PERMS, INITIAL_VALUE);
     
     // check creation status
     if (sem_junction == SEM_FAILED && sem_matrix == SEM_FAILED && sem_north == SEM_FAILED && sem_west == SEM_FAILED && sem_south == SEM_FAILED && sem_east == SEM_FAILED) {
@@ -191,22 +203,23 @@ void create_name_semaphore(){
 
 int main(int argc, const char * argv[]) {
     
-
+    
     
     // Read data from sequence.txt file
     string sequence_list = read_sequence_file(sequence_file_path);
     N = (int)sequence_list.size();
-    cout << "Number of trains = " << N << endl;
+    printf("Number of trains = %d\n" , N);
     
     // output sequence content
     for (int i = 0; i < N ; i++) {
-        cout << sequence_list[i] << " ";
+        printf("%c ", sequence_list[i]);
     }
-    cout << endl;
+    printf("\n");
     
     // initialize matrix file
     initialize_matrix();
     
+    create_name_semaphore();
     
     // start creating child process
     pid_t pids[N];
@@ -229,12 +242,14 @@ int main(int argc, const char * argv[]) {
         
         char d = sequence_list[i];
         char const *direction = &d;
+//        sleep(3);
         
         if (pids[i] == 0) {
-            if (execlp(CHILD_PROGRAM.c_str(), PID, direction ,NULL) < 0) {
+            if (execl(CHILD_PROGRAM.c_str(), PID, direction, NULL) < 0) {
                 perror("execl(2) failed");
                 exit(EXIT_FAILURE);
             }
+            
         }
     }
     
@@ -248,9 +263,16 @@ int main(int argc, const char * argv[]) {
             break;
         }
     }
-
+    
     
     unlink_semaphores(true);
+    
+    if (sem_close(sem_junction) < 0 && sem_close(sem_matrix) < 0 && sem_close(sem_north) < 0 && sem_close(sem_west) < 0 && sem_close(sem_south) < 0 && sem_close(sem_east) < 0) {
+        perror("sem_close(3) failed");
+        /* We ignore possible sem_unlink(3) errors here */
+        unlink_semaphores(false);
+        exit(EXIT_FAILURE);
+    }
     
     return 0;
 }
