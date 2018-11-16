@@ -23,12 +23,12 @@
 #include <semaphore.h>
 
 // Define named semaphore
-#define SEM_JUNCTION "/semaphore_junction"
-#define SEM_READ_MATRIX "/semaphore_read_matrix"
-#define SEM_NORTH "/semaphore_north"
-#define SEM_WEST "/semaphore_west"
-#define SEM_SOUTH "/semaphore_south"
-#define SEM_EAST "/semaphore_east"
+#define SEM_JUNCTION "../manager/semaphore_junction"
+#define SEM_READ_MATRIX "../manager/semaphore_read_matrix"
+#define SEM_NORTH "../manager/semaphore_north"
+#define SEM_WEST "../manager/semaphore_west"
+#define SEM_SOUTH "../manager/semaphore_south"
+#define SEM_EAST "../manager/semaphore_east"
 
 
 
@@ -197,7 +197,7 @@ vector<vector<int>>  readingArray(){
     
     /* reading array */
 
-    vector<vector<int>> array = processFile("/Users/WillJia/Desktop/IOS Lecture/Projects/DeadLockDetection/manager/matrix.txt");
+    vector<vector<int>> array = processFile("/Users/WillJia/Documents/DeadLockDetection/manager/matrix.txt");
     
     return array;
 }
@@ -249,13 +249,16 @@ void get_semaphores(){
  
  *************************************************************************/
 void print_matrix(vector<vector<int>> matrix){
-    
+    cout << "Train<pid" << ID << ">:" << endl;
+    cout << "Direction train : " << direction << endl;
+    cout << "Right Side Direction train : " << right_side_direction << endl;
     for (int i = 0; i < matrix.size(); i++)
     {
         for (int j = 0; j < matrix[i].size(); j++)
         {
-            cout << matrix[i][j];
+            cout << matrix[i][j] << " ";
         }
+        cout << endl;
     }
 }
 
@@ -274,12 +277,13 @@ int main(int argc, const char * argv[]) {
     //Done : change matrix to vector<int>
     vector<vector<int>> matrix = readingArray();
     
-    print_matrix(matrix);
     
     get_arguments(argv);
     
+    print_matrix(matrix);
+
     //get semaphores
-    get_semaphores();
+//    get_semaphores();
     
     
     

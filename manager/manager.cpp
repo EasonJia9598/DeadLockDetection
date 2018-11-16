@@ -49,7 +49,7 @@ using namespace std;
 #define SEM_PERMS (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP)
 #define INITIAL_VALUE 1
 
-#define CHILD_PROGRAM "/Users/WillJia/Desktop/IOS Lecture/Projects/DeadLockDetection/train/train"
+string CHILD_PROGRAM = "/Users/WillJia/Documents/DeadLockDetection/train/train";
 
 // nxm matrix
 #define M 4
@@ -61,10 +61,10 @@ int N = 0;
 ofstream outfile;
 
 // sequence file name
-string sequence_file_path = "/Users/WillJia/Desktop/IOS Lecture/Projects/DeadLockDetection/manager/sequence.txt";
+string sequence_file_path = "/Users/WillJia/Documents/DeadLockDetection/manager/sequence.txt";
 
 // matrix file name
-string matrix_file_path = "/Users/WillJia/Desktop/IOS Lecture/Projects/DeadLockDetection/manager/matrix.txt";
+string matrix_file_path = "/Users/WillJia/Documents/DeadLockDetection/manager/matrix.txt";
 
 
 /************************************************************************
@@ -227,17 +227,28 @@ int main(int argc, const char * argv[]) {
         std::string s = std::to_string(i + 1);
         char const *PID = s.c_str();
         
+        char d = sequence_list[i];
+        char const *direction = &d;
+        
         if (pids[i] == 0) {
-            if (execlp(CHILD_PROGRAM, PID, sequence_list[i] ,NULL) < 0) {
+            if (execlp(CHILD_PROGRAM.c_str(), PID, direction ,NULL) < 0) {
                 perror("execl(2) failed");
                 exit(EXIT_FAILURE);
             }
         }
     }
     
-    for (i = 0; i < N ; i++)
-        if (waitpid(pids[i], NULL, 0) < 0)
-            perror("waitpid(2) failed");
+    int flag = 0;
+    
+    while (1) {
+        if (wait(NULL) > 0)
+            flag++;
+        
+        if (flag >= N) {
+            break;
+        }
+    }
+
     
     unlink_semaphores(true);
     
