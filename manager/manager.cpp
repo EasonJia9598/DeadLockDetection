@@ -51,6 +51,20 @@ using namespace std;
 
 #define CHILD_PROGRAM "/Users/WillJia/Desktop/IOS Lecture/Projects/DeadLockDetection/semDemoC/train"
 
+// nxm matrix
+#define M 4
+
+// nxm matrix
+int N = 0;
+
+// output stream
+ofstream outfile;
+
+// sequence file name
+string sequence_file_path = "/Users/WillJia/Desktop/IOS Lecture/Projects/DeadLockDetection/manager/sequence.txt";
+
+// matrix file name
+string matrix_file_path = "/Users/WillJia/Desktop/IOS Lecture/Projects/DeadLockDetection/manager/matrix.txt";
 
 
 /************************************************************************
@@ -61,6 +75,28 @@ using namespace std;
  
  *************************************************************************/
 
+/************************************************************************
+ 
+ Function:        open_output_file
+ 
+ Description:     open output file
+ 
+ *************************************************************************/
+void open_output_file(string file_path){
+    outfile.open(file_path);
+}
+
+
+/************************************************************************
+ 
+ Function:        close_output_file
+ 
+ Description:     close output file
+ 
+ *************************************************************************/
+void close_output_file(){
+    outfile.close();
+}
 
 
 /************************************************************************
@@ -70,10 +106,10 @@ using namespace std;
  Description:     Read sequenced list from sequence.txt
  
  *************************************************************************/
-string read_sequence_file(string filename){
+string read_sequence_file(string file_path){
     string content;
     string line;
-    ifstream myfile (filename);
+    ifstream myfile (file_path);
     if (myfile.is_open()) {
         while (getline(myfile,line)) {
             content.append(line);
@@ -84,6 +120,38 @@ string read_sequence_file(string filename){
 }
 
 
+/************************************************************************
+ 
+ Function:        initilize_matrix
+ 
+ Description:     Initialize matrix.txt
+ 
+ *************************************************************************/
+void initialize_matrix(){
+    open_output_file(matrix_file_path);
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < M; j++) {
+            outfile << "0" << " ";
+        }
+        outfile << endl;
+    }
+    close_output_file();
+}
+
+/************************************************************************
+ 
+ Function:        unlink_semaphores
+ 
+ Description:     unlink all semaphores
+ 
+ *************************************************************************/
+void unlink_semaphores(bool detect_failed){
+    if (sem_unlink(SEM_JUNCTION)&& sem_unlink(SEM_READ_MATRIX)&&
+        sem_unlink(SEM_NORTH)&& sem_unlink(SEM_WEST)&&
+        sem_unlink(SEM_SOUTH)&& sem_unlink(SEM_EAST)){
+        if(detect_failed)perror("sem_unlink(3) failed");
+    }
+}
 
 /************************************************************************
  
@@ -113,28 +181,65 @@ void create_name_semaphore(){
     if (sem_close(sem_junction) < 0 && sem_close(sem_matrix) < 0 && sem_close(sem_north) < 0 && sem_close(sem_west) < 0 && sem_close(sem_south) < 0 && sem_close(sem_east) < 0) {
         perror("sem_close(3) failed");
         /* We ignore possible sem_unlink(3) errors here */
-        sem_unlink(SEM_JUNCTION);
-        sem_unlink(SEM_READ_MATRIX);
-        sem_unlink(SEM_NORTH);
-        sem_unlink(SEM_WEST);
-        sem_unlink(SEM_SOUTH);
-        sem_unlink(SEM_EAST);
+        unlink_semaphores(false);
         exit(EXIT_FAILURE);
     }
 }
 
+
+
+
 int main(int argc, const char * argv[]) {
     
-    string filename = "/Users/WillJia/Desktop/IOS Lecture/Projects/DeadLockDetection/manager/sequence.txt";
+
+    
     // Read data from sequence.txt file
-    string sequence_list = read_sequence_file(filename);
+    string sequence_list = read_sequence_file(sequence_file_path);
+    N = (int)sequence_list.size();
+    cout << "Number of trains = " << N << endl;
     
-    cout << "Number of trains = " << sequence_list.length() << endl;
+    // output sequence content
+    for (int i = 0; i < N ; i++) {
+        cout << sequence_list[i] << " ";
+    }
+    cout << endl;
     
-    for (int i = 0; i < sequence_list.length(); i++) {
-        cout << sequence_list[i] << endl;
+    // initialize matrix file
+    initialize_matrix();
+    
+    
+    // start creating child process
+    pid_t pids[N];
+    int i ;
+    
+    for (i = 0; i < N ; i++) {
+        
+        // TODO: check deadlock by probability
+        
+        
+        // ELSE: generate new train process
+        
+        if ((pids[i] = fork()) < 0) {
+            perror("fork(2) failed");
+            exit(EXIT_FAILURE);
+        }
+        // generate pid from 1
+        std::string s = std::to_string(i + 1);
+        char const *PID = s.c_str();
+        
+        if (pids[i] == 0) {
+            if (execlp(CHILD_PROGRAM, PID, sequence_list[i] ,NULL) < 0) {
+                perror("execl(2) failed");
+                exit(EXIT_FAILURE);
+            }
+        }
     }
     
+    for (i = 0; i < N ; i++)
+        if (waitpid(pids[i], NULL, 0) < 0)
+            perror("waitpid(2) failed");
+    
+    unlink_semaphores(true);
     
     return 0;
 }

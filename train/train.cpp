@@ -22,13 +22,36 @@
 #include <ctime>
 #include <semaphore.h>
 
+// Define named semaphore
+#define SEM_JUNCTION "/semaphore_junction"
+#define SEM_READ_MATRIX "/semaphore_read_matrix"
+#define SEM_NORTH "/semaphore_north"
+#define SEM_WEST "/semaphore_west"
+#define SEM_SOUTH "/semaphore_south"
+#define SEM_EAST "/semaphore_east"
+
+
 
 using namespace std;
 
+// child PID
+int ID ;
 
-int ID ; // child PID
+// train direction
+char direction;
+// train right_side_direction
+char right_side_direction;
 
+// all direction
+char all_dir[4] = {'N' , 'W' , 'S' , 'E'};
+// corresponding right side
+// (index + 1) % 4
 
+// get semaphores
+sem_t *sem_junction;
+sem_t *sem_matrix;
+sem_t *sem_direction;
+sem_t *sem_right_side_direction;
 
 /************************************************************************
  
@@ -129,6 +152,21 @@ vector<int> processFile(string filename){
     return arrayConvert(readContent(filename));
 }
 
+/************************************************************************
+ 
+ Function:        get_right_side_direction
+ 
+ Description:     get ID from **argv
+ 
+ *************************************************************************/
+char get_right_side_direction(){
+    for (int i = 0; i < 4; i++) {
+        if (all_dir[i] == direction) {
+            return all_dir[(i + 1) % 4];
+        }
+    }
+    return NULL;
+}
 
 /************************************************************************
  
@@ -137,8 +175,11 @@ vector<int> processFile(string filename){
  Description:     get ID from **argv
  
  *************************************************************************/
-void getID(const char * argv[]){
+void get_arguments(const char * argv[]){
     ID = atoi(argv[0]);
+    direction = argv[1][0];
+    right_side_direction = get_right_side_direction();
+
 }
 
 /************************************************************************
@@ -154,21 +195,55 @@ vector<int> readingArray(){
     vector<int> array;
 
     array = processFile("/Users/WillJia/Desktop/IOS Lecture/Projects/DeadLockDetection/manager/matrix.txt");
-
     
     return array;
 }
 
+void get_direction_semaphores(sem_t *sem_dir , char char_dir){
+    switch (char_dir) {
+        case 'N':
+            sem_dir = sem_open(SEM_NORTH, O_RDWR);
+            break;
+        case 'W':
+            sem_dir = sem_open(SEM_WEST, O_RDWR);
+            break;
+        case 'S':
+            sem_dir = sem_open(SEM_SOUTH, O_RDWR);
+            break;
+        case 'E':
+            sem_dir = sem_open(SEM_EAST, O_RDWR);
+            break;
+    }
+    
+}
+/************************************************************************
+ 
+ Function:        get_semaphores
+ 
+ Description:     get_semaphores
+ 
+ *************************************************************************/
+void get_semaphores(){
+    // get 4 semaphores
+    // get junction and matrix semaphore
+    sem_junction = sem_open(SEM_JUNCTION, O_RDWR);
+    sem_matrix = sem_open(SEM_READ_MATRIX,O_RDWR);
+    // get specific train semaphore and its right side semaphore
+    get_direction_semaphores(sem_direction , direction);
+    get_direction_semaphores(sem_right_side_direction , right_side_direction);
+}
 int main(int argc, const char * argv[]) {
     
     
     srand((int)time(NULL));
     
     //Done : change array to vector<int>
-    vector<int> array;
-    getID(argv);
-
-        
+    vector<int> array = readingArray();
+    get_arguments(argv);
+    
+    //get semaphores
+    get_semaphores();
+    
     
     
 }
