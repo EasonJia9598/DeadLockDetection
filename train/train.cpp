@@ -33,8 +33,6 @@
 #define SEM_SOUTH "/semaphore_south"
 #define SEM_EAST "/semaphore_east"
 
-
-
 using namespace std;
 
 // child PID
@@ -63,6 +61,16 @@ sem_t *sem_matrix;
 sem_t *sem_direction;
 sem_t *sem_right_side_direction;
 
+
+// matrix file name
+string matrix_file_path = "/Users/WillJia/Documents/DeadLockDetection/manager/matrix.txt";
+
+
+// matrix
+vector<vector<int>> matrix ;
+
+// output stream
+ofstream outfile;
 /************************************************************************
  
  
@@ -203,13 +211,10 @@ void get_arguments(const char * argv[]){
  Description:     whole procedure of reading array
  
  *************************************************************************/
-vector<vector<int>>  readingArray(){
+void readingArray(){
     
     /* reading array */
-    
-    vector<vector<int>> array = processFile("/Users/WillJia/Documents/DeadLockDetection/manager/matrix.txt");
-    
-    return array;
+    matrix = processFile(matrix_file_path);
 }
 
 
@@ -336,6 +341,54 @@ void print_matrix(vector<vector<int>> matrix){
 
 /************************************************************************
  
+ Function:        open_output_file
+ 
+ Description:     open output file
+ 
+ *************************************************************************/
+void open_output_file(string file_path){
+    outfile.open(file_path);
+}
+
+/************************************************************************
+ 
+ Function:        close_output_file
+ 
+ Description:     close output file
+ 
+ *************************************************************************/
+void close_output_file(){
+    outfile.close();
+}
+
+/************************************************************************
+ 
+ Function:        update_matrix
+ 
+ Description:     update_matrix
+ 
+ *************************************************************************/
+
+void update_matrix(int i ,int j , int value){
+    
+    sem_wait(sem_matrix);
+    matrix[i][j] = value;
+    
+    open_output_file(matrix_file_path);
+    for (int i = 0; i < matrix.size(); i++) {
+        for (int j = 0; j < matrix[i].size(); j++) {
+            outfile << matrix[i][j] << " ";
+        }
+        outfile << endl;
+    }
+    
+    close_output_file();
+    
+    sem_post(sem_matrix);
+    
+}
+/************************************************************************
+ 
  Function:        main
  
  Description:     get_semaphores
@@ -346,7 +399,7 @@ int main(int argc, const char * argv[]) {
     srand((int)time(NULL));
     
     //Done : change matrix to vector<int>
-    vector<vector<int>> matrix = readingArray();
+    matrix = readingArray();
     
     
     get_arguments(argv);
@@ -356,11 +409,18 @@ int main(int argc, const char * argv[]) {
     
     // waits direction semaphore
     printf("Train<pid%d>: %s Started\n" , ID, train_info[index_direction].c_str());
+    
     // request for direction lock
     printf("Train<pid%d>: requests for %s \n", ID, lock_info[index_direction].c_str());
+    
+    update_matrix(ID - 1, index_direction, 1);
+    
     sem_wait(sem_direction);
     printf("Train<pid%d>: acquires for %s\n", ID, lock_info[index_direction].c_str());
+    update_matrix(ID - 1, index_direction, 2);
     
+    print_matrix(matrix);
+
     // request for right side lock
     printf("Train<pid%d>: requests for %s \n", ID, lock_info[index_right_side_direction].c_str());
     sem_wait(sem_right_side_direction);

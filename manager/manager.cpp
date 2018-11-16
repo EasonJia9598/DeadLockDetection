@@ -50,7 +50,7 @@ using namespace std;
 #define INITIAL_VALUE 1
 
 //string CHILD_PROGRAM = "./train";
-string CHILD_PROGRAM = "/Users/WillJia/Documents/DeadLockDetection/train/train";
+string CHILD_PROGRAM = "/Users/WillJia/Documents/DeadLockDetection/manager/train";
 
 
 // nxm matrix
@@ -137,6 +137,7 @@ string read_sequence_file(string file_path){
  
  *************************************************************************/
 void initialize_matrix(){
+    
     open_output_file(matrix_file_path);
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < M; j++) {
@@ -160,7 +161,15 @@ void unlink_semaphores(bool detect_failed){
         sem_unlink(SEM_SOUTH) && sem_unlink(SEM_EAST)){
         if(detect_failed)perror("sem_unlink(3) failed");
     }
-
+    
+    /* Close the semaphore as we won't be using it in the parent process */
+    if (sem_close(sem_junction) < 0 && sem_close(sem_matrix) < 0 && sem_close(sem_north) < 0 && sem_close(sem_west) < 0 && sem_close(sem_south) < 0 && sem_close(sem_east) < 0) {
+        perror("sem_close(3) failed");
+        /* We ignore possible sem_unlink(3) errors here */
+        unlink_semaphores(false);
+        exit(EXIT_FAILURE);
+    }
+    
 }
 
 /************************************************************************
@@ -203,7 +212,6 @@ void create_name_semaphore(){
 
 
 int main(int argc, const char * argv[]) {
-    
     
     
     // Read data from sequence.txt file
