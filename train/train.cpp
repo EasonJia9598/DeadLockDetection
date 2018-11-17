@@ -24,6 +24,9 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <chrono>
+
+using namespace std::chrono;
 
 // Define named semaphore
 #define SEM_JUNCTION "/semaphore_junction"
@@ -389,6 +392,25 @@ void update_matrix(int i ,int j , int value){
     sem_post(sem_matrix);
     
 }
+
+
+auto startTime = steady_clock::now();
+auto timeout = seconds(5);
+auto currentTime = steady_clock::now();
+
+void auto_time_out_start_setting(){
+    startTime = steady_clock::now();
+    timeout = seconds(5);
+}
+
+void auto_time_out_check(){
+    auto currentTime = steady_clock::now();
+    if (currentTime - startTime > timeout) {
+        printf("DeadLock process exit!\n");
+        exit(1);
+    }
+}
+
 /************************************************************************
  
  Function:        main
@@ -398,6 +420,7 @@ void update_matrix(int i ,int j , int value){
  *************************************************************************/
 int main(int argc, const char * argv[]) {
     
+
     srand((int)time(NULL));
     
     //Done : change matrix to vector<int>

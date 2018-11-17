@@ -72,6 +72,7 @@ string sequence_file_path = "/Users/WillJia/Documents/DeadLockDetection/manager/
 // matrix file name
 string matrix_file_path = "/Users/WillJia/Documents/DeadLockDetection/manager/matrix.txt";
 
+
 // declare sem_t
 sem_t *sem_junction;
 sem_t *sem_matrix;
@@ -103,6 +104,8 @@ string train_info[4] = {"North" , "West" , "South" , "East"};
  
  
  *************************************************************************/
+
+
 /************************************************************************
  
  Function:        num_2_char
@@ -412,6 +415,8 @@ void find_cycle() {
  
  *************************************************************************/
 void show_cycle() {
+    show_data();
+    
     int detect_deadlock_flag = 0;
     for(int i = 0 ; i < n;i++)
     {
@@ -505,6 +510,7 @@ void read_data() {
     
     sem_wait(sem_matrix);
     vector<vector<int>> array = readContent(matrix_file_path);
+    
     print_matrix(array);
    
     
@@ -534,10 +540,13 @@ void read_data() {
  
  *************************************************************************/
 void check_deadlock(){
+    printf("\n\n*************************************************\n\n");
+    printf("Check For DeadLock : \n");
+    printf("\n\n*************************************************\n");
     read_data();
-    show_data();
     find_cycle();
     show_cycle();
+    // empty container
     EWD.clear();
     for (int i = 0; i < 100; i++) {
         marked[i] = false;
@@ -552,12 +561,12 @@ void check_deadlock(){
 
 int main(int argc, const char * argv[]) {
     
-//   sem_close(sem_junction) ;
-//    sem_close(sem_matrix) ;
-//    sem_close(sem_north) ;
-//    sem_close(sem_west) ;
-//    sem_close(sem_south) ;
-//    sem_close(sem_east);
+    sem_close(sem_junction) ;
+    sem_close(sem_matrix) ;
+    sem_close(sem_north) ;
+    sem_close(sem_west) ;
+    sem_close(sem_south) ;
+    sem_close(sem_east);
 
     
     float p = atof(argv[1]);
@@ -614,7 +623,7 @@ int main(int argc, const char * argv[]) {
 
             
             if (pids[i] == 0) {
-                if (execl(CHILD_PROGRAM.c_str(), PID, direction, NULL) < 0) {
+                if (execlp(CHILD_PROGRAM.c_str(), PID, direction, NULL) < 0) {
                     perror("execl(2) failed");
                     exit(EXIT_FAILURE);
                 }
@@ -628,6 +637,7 @@ int main(int argc, const char * argv[]) {
     int flag = 0;
     
     while (1) {
+        sleep(1);
         check_deadlock();
         if (wait(NULL) > 0)
             flag++;
