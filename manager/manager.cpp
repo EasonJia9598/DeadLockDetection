@@ -8,24 +8,19 @@
 
 
 #include <iostream>
-#include <algorithm>    // std::sort
 #include <fstream>
+#include <sstream>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/types.h>
 #include <string.h>
-#include <unistd.h>
-#include <string.h>
-#include <fstream>
 #include <vector>
-#include <sstream>
-#include <cstdlib>
-#include <ctime>
 #include <semaphore.h>
 #include <fcntl.h>
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <vector>
+#include <cstdlib>
+#include <ctime>
 #include <tuple>
 #include <stack>
 #include <map>
@@ -254,7 +249,7 @@ string read_sequence_file(string file_path){
  
  *************************************************************************/
 void initialize_matrix(){
-    
+    // open file
     open_output_file(matrix_file_path);
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < M; j++) {
@@ -262,6 +257,7 @@ void initialize_matrix(){
         }
         outfile << endl;
     }
+    //close file
     close_output_file();
 }
 
@@ -299,7 +295,7 @@ void unlink_semaphores(bool detect_failed){
 
 
 
-void create_name_semaphore(){
+void create_named_semaphore(){
 //    unlink_semaphores(true);
     // initialize basic semaphores
     /* We initialize the semaphore counter to 1 (INITIAL_VALUE) */
@@ -327,22 +323,20 @@ void create_name_semaphore(){
  
  *************************************************************************/
 void print_matrix(vector<vector<int>> matrix){
+    
     printf("--------------------------------------------------\n");
-    printf("            Semaphores          \n");
-    printf("             North   West    South   East    \n");
-    printf("--------------------------------------------------\n");
+    printf("                                  Semaphores          \n");
+    printf("                        North   West    South   East    \n");
+    printf("---------------------------------------------------------\n");
 
     for (int i = 0; i < matrix.size(); i++)
     {
-        printf("Train<pid%d>    {" , i + 1);
+        printf("Train<pid%d>    :" , i + 1);
         for (int j = 0; j < matrix[i].size(); j++)
         {
-            printf("%d",  matrix[i][j]);
-            if (j < 3) {
-                printf(",");
-            }
+            printf("%5d   ",  matrix[i][j]);
         }
-        printf("} , \n");
+        printf("\n");
     }
     printf("\n");
 }
@@ -354,6 +348,7 @@ void print_matrix(vector<vector<int>> matrix){
  Description:     dfs
  
  *************************************************************************/
+// REF: https://blog.csdn.net/cook2eat/article/details/54022485
 void dfs(int v) {
     onStack[v] = true;
     marked[v] = true;
@@ -383,6 +378,13 @@ void dfs(int v) {
     
     onStack[v] = false;
 }
+
+/************************************************************************
+ 
+ Function:        show_data
+ 
+ Description:    show_data
+ *************************************************************************/
 
 void show_data() {
     cout << "EdgeWeightedDigraph : " << endl;
@@ -421,59 +423,82 @@ bool show_cycle() {
     show_data();
     
     int detect_deadlock_flag = 0;
-    for(int i = 0 ; i < n;i++)
+    
+    for(int i = 0 ; i < n ; i++)
     {
         int index = 0;
         string train_info_first;
         int index_first = 0 ;
+        
         if(!cycle[0].empty()) detect_deadlock_flag = 1;
-        if (detect_deadlock_flag) {
-            detect_deadlock_flag = 1;
-             printf("*************************************************\n\n");
+        
+        if (detect_deadlock_flag == 1) {
+            printf("*************************************************\n\n");
             printf(" DeadLock detected!!!!!!!\n\n");
             printf("*************************************************\n\n");
 
         }
         
         vector<string> string_cycle;
-        
+
+        // when cycle is not empty, then we found a deadlock cycle
         while(!cycle[i].empty()) {
-            tuple<int, int, double> f = cycle[i].top();
             
+            tuple<int, int, double> f = cycle[i].top();
             string first_string, second_string;
             
-            
-            if (get<0>(f) < 4) {
-                first_string = "[ " + train_info[get<0>(f)] + " ] ";
-            }else{
-                first_string = "( Tran<pid" + to_string(get<0>(f) - 3) +"> )" ;
-            }
-            
-            if (get<1>(f) < 4) {
-                second_string = "[ " + train_info[get<1>(f)] + "  ] ";
-            }else{
-                second_string = "( Tran<pid" + to_string(get<1>(f) - 3) +"> )" ;
-
-            }
-            
-            string_cycle.push_back(first_string  + "                ->               " + second_string + "\n" );
-            
-        
-            if (get<2>(f) == 2) {
-                printf("-Train<pid%d> from %s " , get<1>(f) - 3, train_info[get<0>(f)].c_str());
+            // code segemant for RAG (Resource Allocation Graph)
+            {
                 
-                if (index != 0) {
-                    printf("\n");
+                // tranlate adjacency matrix to human words
+                // 0 - 3 are semaphores
+                //4 - N are Trains pid + 3
+                // translate number to direction
+                // because <0> the number "0" can not use varaible, so we write all codes twice
+                if (get<0>(f) < 4) {
+                    first_string = "[ " + train_info[get<0>(f)] + " ] ";
+                }else{
+                    first_string = "( Tran<pid" + to_string(get<0>(f) - 3) +"> )" ;
                 }
+                if (get<1>(f) < 4) {
+                    second_string = "[ " + train_info[get<1>(f)] + "  ] ";
+                }else{
+                    second_string = "( Tran<pid" + to_string(get<1>(f) - 3) +"> )" ;
+
+                }
+                
+                // add link two nodes
+                string_cycle.push_back(first_string  + "       ------------->             " + second_string + "\n" );
+            
+            }
+            
+            // Print ouput sample's standard -- only focus on weight == 2
+            // last train's request direction can get by next train's occupied direction
+            // Then we only need half edges in all.
+            
+            // if weight == 2. In EDW graph, it's A -> B 2
+            // then it means Train B occupied Resource A.
+            // so when weight == 2, we change the print out sequence.
+            
+            if (get<2>(f) == 2) {
+                
+                // first time as the first string in sentence
+                // after as the second string in sentence
+                
+                printf("-Train<pid%d> from %s " , get<1>(f) - 3, train_info[get<0>(f)].c_str());
+            
+                // save first edges information for the last one link back to the first
                 if (index == 0) {
                     index_first = get<1>(f) - 3;
                     train_info_first = train_info[get<0>(f)];
                     printf("is waiting for ");
                 }
                 
-                if (index!= 0){
+                // if it's not the first time.
+                // print line breaker and be the first sentence
+                if (index != 0) {
+                    printf("\n");
                     printf("-Train<pid%d> from %s " ,  get<1>(f)  - 3, train_info[get<0>(f)].c_str());
-                    
                     printf("is waiting for "  );
                 }
                 index++;
@@ -482,24 +507,29 @@ bool show_cycle() {
             
             cycle[i].pop();
         }
-        printf("-Train<pid%d> from %s \n" ,index_first , train_info_first.c_str());
         
+        // set exit
+        detect_deadlock_flag = 1;
+        // link back to the front complete cycle
+        printf("-Train<pid%d> from %s \n" ,index_first , train_info_first.c_str());
         printf("\n\n*************************************************\n\n");
         printf("RAG grahp : \n");
-        printf("\n\n*************************************************\n");
+        printf("\n\n*************************************************\n\n");
 
         for(string item : string_cycle){
             printf("%s" , item.c_str());
         }
+        
+        if (detect_deadlock_flag == 1) {
+            exit_flag = true;
+            unlink_semaphores(false);
+            return exit_flag;
+        }
     }
     
-    if (detect_deadlock_flag == 1) {
-        exit_flag = true;
-        unlink_semaphores(false);
-        return exit_flag;
-    }else{
-        return false;
-    }
+
+    return false;
+
 }
 
 /************************************************************************
@@ -515,19 +545,13 @@ void read_data() {
     
     sem_wait(sem_matrix);
     vector<vector<int>> array = readContent(matrix_file_path);
-    
     print_matrix(array);
-   
-    
-    
     for(int i = 0 ; i < array.size(); i++){
         for (int j = 0;j < array[i].size() ;j++) {
             if (array[i][j] == 2) {
-                //                printf("j %d -> i %d\n" , j , i + 4 );
                 EWD[j].push_back(make_tuple(j, i+4, 2));
                 E++;
             }else if (array[i][j] == 1) {
-                //                printf("i %d -> j %d\n" , i + 4 , j );
                 EWD[i+4].push_back(make_tuple(i+4, j, 1));
                 E++;
             }
@@ -551,13 +575,15 @@ bool check_deadlock(){
     read_data();
     find_cycle();
     bool exit_flag = show_cycle();
-    // empty container
-    EWD.clear();
-    for (int i = 0; i < 100; i++) {
-        marked[i] = false;
-        onStack[i] = false;
-        while (!cycle[i].empty()){
-            cycle[i].pop();
+    if (!exit_flag) {
+        // empty container
+        EWD.clear();
+        for (int i = 0; i < 100; i++) {
+            marked[i] = false;
+            onStack[i] = false;
+            while (!cycle[i].empty()){
+                cycle[i].pop();
+            }
         }
     }
     return exit_flag;
@@ -603,7 +629,7 @@ int main(int argc, const char * argv[]) {
     // initialize matrix file
     initialize_matrix();
     
-    create_name_semaphore();
+    create_named_semaphore();
     
     // start creating child process
     pid_t pids[N];
@@ -611,21 +637,25 @@ int main(int argc, const char * argv[]) {
     
     while(1){
         
-        // TODO: check deadlock by probability
+        // check deadlock by probability
         float r = (rand() % 10) / 10.0 ;
+        
         if (r < p) {
-            check_deadlock();
-        }else{
-        
-            // ELSE: generate new train process
+            if(check_deadlock()){
+                for (int j = 0; j < i ; i++) {
+                    printf("kill children process (pid == %d)\n" , pids[j]);
+                    if (pids[j] != 0) kill(pids[j], SIGTERM);
+                }
+                sleep(1);
+                exit(1);
+            }
             
-        
+        }else{
+        // ELSE: generate new train process
             if ((pids[i] = fork()) < 0) {
                 perror("fork(2) failed");
                 exit(EXIT_FAILURE);
             }
-            
-            
             // generate pid from 1
             std::string s = std::to_string(i + 1);
             char const *PID = s.c_str();
@@ -655,6 +685,7 @@ int main(int argc, const char * argv[]) {
                 printf("kill children process (pid == %d)\n" , pids[i]);
                    kill(pids[i], SIGTERM);
             }
+            sleep(1);
             exit(1);
         }
         
