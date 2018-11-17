@@ -29,6 +29,7 @@
 #include <tuple>
 #include <stack>
 #include <map>
+#include <signal.h>
 
 /************************************************************************************
  
@@ -414,7 +415,9 @@ void find_cycle() {
  Description:     show found cycle
  
  *************************************************************************/
-void show_cycle() {
+bool show_cycle() {
+    bool exit_flag = false;
+    
     show_data();
     
     int detect_deadlock_flag = 0;
@@ -491,9 +494,11 @@ void show_cycle() {
     }
     
     if (detect_deadlock_flag == 1) {
-//        printf("DeadLock detected!!!!!!!\n");
+        exit_flag = true;
         unlink_semaphores(false);
-        exit(1);
+        return exit_flag;
+    }else{
+        return false;
     }
 }
 
@@ -539,13 +544,13 @@ void read_data() {
  Description:     check_deadlock
  
  *************************************************************************/
-void check_deadlock(){
+bool check_deadlock(){
     printf("\n\n*************************************************\n\n");
     printf("Check For DeadLock : \n");
     printf("\n\n*************************************************\n");
     read_data();
     find_cycle();
-    show_cycle();
+    bool exit_flag = show_cycle();
     // empty container
     EWD.clear();
     for (int i = 0; i < 100; i++) {
@@ -555,9 +560,16 @@ void check_deadlock(){
             cycle[i].pop();
         }
     }
-
+    return exit_flag;
 }
 
+/************************************************************************
+ 
+ Function:        main
+ 
+ Description:     main function
+ 
+ *************************************************************************/
 
 int main(int argc, const char * argv[]) {
     
@@ -638,7 +650,14 @@ int main(int argc, const char * argv[]) {
     
     while (1) {
         sleep(1);
-        check_deadlock();
+        if(check_deadlock()){
+            for (int i = 0; i < N; i++) {
+                printf("kill children process (pid == %d)\n" , pids[i]);
+                   kill(pids[i], SIGTERM);
+            }
+            exit(1);
+        }
+        
         if (wait(NULL) > 0)
             flag++;
         if (flag >= N) {

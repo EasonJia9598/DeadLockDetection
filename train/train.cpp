@@ -2,8 +2,8 @@
 //  main.cpp
 //  child
 //
-//  Created by WillJia on 2018-09-24.
-//  Copyright © 2018 WillJia. All rights reserved.
+//  Created by Zesheng Jia on 2018-09-24.
+//  Copyright © 2018 Zesheng Jia. All rights reserved.
 //
 
 
@@ -220,11 +220,19 @@ void get_arguments(const char * argv[]){
     
 }
 
-
+/************************************************************************
+ 
+ Function:        get_direction_semaphores
+ 
+ Description:     get_direction_semaphores and index
+ 
+ *************************************************************************/
 
 
 int get_direction_semaphores(char char_dir){
+    
     int index = 0;
+    // according to the Argv from parent process to choose which semaphore to use
     switch (char_dir) {
         case 'N':
             index = 0;
@@ -250,8 +258,18 @@ int get_direction_semaphores(char char_dir){
     return index;
 }
 
+/************************************************************************
+ 
+ Function:        get_right_side_direction_semaphores
+ 
+ Description:     get_right_side_direction_semaphores and index
+ 
+ *************************************************************************/
+
 int get_right_side_direction_semaphores( char char_dir){
+    
     int index = 0;
+    // according to the Argv from parent process to choose which semaphore to use
     switch (char_dir) {
         case 'N':
             index = 0;
@@ -293,9 +311,9 @@ void get_semaphores(){
     
     // get specific train semaphore and its right side semaphore
     index_direction = get_direction_semaphores(direction);
-    
     index_right_side_direction = get_right_side_direction_semaphores(right_side_direction);
     
+    // check semaphore
     if (sem_junction == SEM_FAILED ){
         perror("Child sem_open(sem_junction) failed");
         exit(EXIT_FAILURE);
@@ -323,10 +341,12 @@ void get_semaphores(){
  
  *************************************************************************/
 void print_matrix(vector<vector<int>> matrix){
+    // print matrix
     printf("Train<pid%d>:\n" , ID);
     printf("Direction train: %c\n" , direction);
     printf("Right Side Direction train: %c\n", right_side_direction);
     printf("{");
+    
     for (int i = 0; i < matrix.size(); i++)
     {
         printf("{");
@@ -394,28 +414,11 @@ void update_matrix(int i ,int j , int value){
 }
 
 
-auto startTime = steady_clock::now();
-auto timeout = seconds(5);
-auto currentTime = steady_clock::now();
-
-void auto_time_out_start_setting(){
-    startTime = steady_clock::now();
-    timeout = seconds(5);
-}
-
-void auto_time_out_check(){
-    auto currentTime = steady_clock::now();
-    if (currentTime - startTime > timeout) {
-        printf("DeadLock process exit!\n");
-        exit(1);
-    }
-}
-
 /************************************************************************
  
  Function:        main
  
- Description:     get_semaphores
+ Description:      main function
  
  *************************************************************************/
 int main(int argc, const char * argv[]) {
@@ -426,7 +429,7 @@ int main(int argc, const char * argv[]) {
     //Done : change matrix to vector<int>
     readingArray();
     
-    
+    // get arguments by argv
     get_arguments(argv);
     
     //get semaphores
@@ -442,6 +445,7 @@ int main(int argc, const char * argv[]) {
     update_matrix(ID - 1, index_direction, 1);
     
     sem_wait(sem_direction);
+    
     // acquire for direction lock
     printf("Train<pid%d>: acquires for %s\n", ID, lock_info[index_direction].c_str());
     
@@ -487,7 +491,5 @@ int main(int argc, const char * argv[]) {
     
     // upadte matrix
     update_matrix(ID - 1, index_right_side_direction, 0);
-    
-    
     
 }
