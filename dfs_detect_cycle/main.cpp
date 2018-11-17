@@ -64,6 +64,11 @@ void showCycle() {
         while(!cycle[i].empty()) {
             tuple<int, int, double> f = cycle[i].top();
         
+//            tuple<int, int, double> f = cycle[i].top();
+//            cout << get<0>(f) << "->" << get<1>(f) << " " << get<2>(f) << endl;
+//            weight += get<2>(f);
+//            cycle[i].pop();
+//            
             if (get<2>(f) == 2) {
                 
                  printf("-Train<pid%d> from %s " , get<1>(f) - 3, train_info[get<0>(f)].c_str());

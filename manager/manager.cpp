@@ -427,11 +427,31 @@ void show_cycle() {
 
         }
         
+        vector<string> string_cycle;
+        
         while(!cycle[i].empty()) {
             tuple<int, int, double> f = cycle[i].top();
             
+            string first_string, second_string;
+            
+            
+            if (get<0>(f) < 4) {
+                first_string = "[ " + train_info[get<0>(f)] + " ] ";
+            }else{
+                first_string = "( Tran<pid" + to_string(get<0>(f) - 3) +"> )" ;
+            }
+            
+            if (get<1>(f) < 4) {
+                second_string = "[ " + train_info[get<1>(f)] + "  ] ";
+            }else{
+                second_string = "( Tran<pid" + to_string(get<1>(f) - 3) +"> )" ;
+
+            }
+            
+            string_cycle.push_back(first_string  + "                ->               " + second_string + "\n" );
+            
+        
             if (get<2>(f) == 2) {
-                
                 printf("-Train<pid%d> from %s " , get<1>(f) - 3, train_info[get<0>(f)].c_str());
                 
                 if (index != 0) {
@@ -456,6 +476,13 @@ void show_cycle() {
         }
         printf("-Train<pid%d> from %s \n" ,index_first , train_info_first.c_str());
         
+        printf("\n\n*************************************************\n\n");
+        printf("RAG grahp : \n");
+        printf("\n\n*************************************************\n");
+
+        for(string item : string_cycle){
+            printf("%s" , item.c_str());
+        }
     }
     
     if (detect_deadlock_flag == 1) {
@@ -610,6 +637,9 @@ int main(int argc, const char * argv[]) {
     }
     
     
+    printf("\n\n*************************\n\n");
+    printf("All trains Successfully passed !!!");
+    printf("\n\n*************************\n\n");
     
     unlink_semaphores(true);
     
