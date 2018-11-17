@@ -15,6 +15,8 @@ bool marked[100];   // v 是否已经被访问过？
 bool onStack[100];  // v 是否在栈里？
 tuple<int , int , double> edgeTo[100]; // 到达顶点 v 的最后一条边
 stack<tuple<int , int , double>> cycle[100];    // 有向环
+// train info
+string train_info[4] = {"North" , "West" , "South" , "East"};
 
 
 void dfs(int v) {
@@ -56,14 +58,38 @@ void showCycle() {
     cout << "Cycle : " << endl;
     for(int i = 0 ; i < n;i++)
     {
-        double weight = 0.0;
+        int index = 0;
+        string train_info_first;
+        int index_first = 0 ;
         while(!cycle[i].empty()) {
             tuple<int, int, double> f = cycle[i].top();
-            cout << get<0>(f) << "->" << get<1>(f) << " " << get<2>(f) << endl;
-            weight += get<2>(f);
+        
+            if (get<2>(f) == 2) {
+                
+                 printf("-Train<pid%d> from %s " , get<1>(f) - 3, train_info[get<0>(f)].c_str());
+                
+                if (index != 0) {
+                   printf("\n");
+                }
+                if (index == 0) {
+                    index_first = get<1>(f) - 3;
+                    train_info_first = train_info[get<0>(f)];
+                    printf("is waiting for ");
+                }
+                
+                if (index!= 0){
+                    printf("-Train<pid%d> from %s " ,  get<1>(f)  - 3, train_info[get<0>(f)].c_str());
+                 
+                    printf("is waiting for "  );
+                }
+                index++;
+               
+            }
+            
             cycle[i].pop();
         }
-        cout << "weight = " << weight << endl << endl;
+        printf("-Train<pid%d> from %s \n" ,index_first , train_info_first.c_str());
+
     }
 }
 
@@ -71,26 +97,20 @@ void showCycle() {
 void readData() {
     V = 16;
     int N = 12, M = 4;
-//    int array[4][4] = {
-//        {2 , 1 , 0 ,0 } ,
-//        {0,2,1,0},
-//        {0,0,2,1},
-//        {1,0,0,2}
-//    };
-    
+
     int array[12][4] = {
-        {1,0,0,0},
-        {0,1,0,0},
-        {0,0,0,1},
-        {0,0,1,0},
-        {1,0,0,0},
-        {0,1,0,0},
-        {0,0,0,1},
-        {0,0,1,0},
-        {1,0,0,0},
-        {0,1,0,0},
-        {0,0,0,1},
-        {0,0,1,0}
+        {0,0,0,0} ,
+        {0,0,0,0} ,
+        {0,0,0,2} ,
+        {0,0,2,2} ,
+        {2,1,0,0} ,
+        {0,1,0,0} ,
+        {0,0,0,1} ,
+        {0,0,1,0} ,
+        {1,0,0,0} ,
+        {0,0,0,0} ,
+        {0,0,0,0} ,
+        {0,0,0,0}
         
     };
     
@@ -98,7 +118,7 @@ void readData() {
         for (int j = 0;j < M ;j++) {
             if (array[i][j] == 2) {
                 //                printf("j %d -> i %d\n" , j , i + 4 );
-                EWD[j].push_back(make_tuple(j, i+4, 1));
+                EWD[j].push_back(make_tuple(j, i+4, 2));
                 E++;
             }else if (array[i][j] == 1) {
                 //                printf("i %d -> j %d\n" , i + 4 , j );
@@ -119,8 +139,12 @@ void showData() {
             cout << get<0>(*ii) << "->" << get<1>(*ii) << " " << get<2>(*ii) << " ";
         cout << endl;
     }
-    
-    system("pause");
+}
+
+void check_deadlock(){
+    readData();
+    findCycle();
+    showCycle();
 }
 
 int main()

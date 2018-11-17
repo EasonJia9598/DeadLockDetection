@@ -48,7 +48,7 @@ char all_dir[4] = {'N' , 'W' , 'S' , 'E'};
 // corresponding right side
 // (index + 1) % 4
 // train info
-string train_info[4] = {"North Train" , "West Train" , "South Train" , "East Train"};
+string train_info[4] = {"North" , "West" , "South" , "East"};
 // lock info
 string lock_info[4] = {"North_Lock" , "West_Lock" , "South_Lock" , "East_Lock"};
 // train index
@@ -176,6 +176,19 @@ vector<vector<int>> processFile(string filename){
 
 /************************************************************************
  
+ Function:        readingArray
+ 
+ Description:     whole procedure of reading array
+ 
+ *************************************************************************/
+void readingArray(){
+    
+    /* reading array */
+    matrix = processFile(matrix_file_path);
+}
+
+/************************************************************************
+ 
  Function:        get_right_side_direction
  
  Description:     get ID from **argv
@@ -204,18 +217,7 @@ void get_arguments(const char * argv[]){
     
 }
 
-/************************************************************************
- 
- Function:        readingArray
- 
- Description:     whole procedure of reading array
- 
- *************************************************************************/
-void readingArray(){
-    
-    /* reading array */
-    matrix = processFile(matrix_file_path);
-}
+
 
 
 int get_direction_semaphores(char char_dir){
@@ -223,22 +225,18 @@ int get_direction_semaphores(char char_dir){
     switch (char_dir) {
         case 'N':
             index = 0;
-            printf("D get %d\n" , index);
             sem_direction = sem_open(SEM_NORTH, O_RDWR);
             break;
         case 'W':
             index = 1;
-            printf("D get %d\n" , index);
             sem_direction = sem_open(SEM_WEST, O_RDWR);
             break;
         case 'S':
             index = 2;
-            printf("D get %d\n" , index);
             sem_direction = sem_open(SEM_SOUTH, O_RDWR);
             break;
         case 'E':
             index = 3;
-            printf("D get %d\n" , index);
             sem_direction = sem_open(SEM_EAST, O_RDWR);
             break;
         default:
@@ -254,22 +252,18 @@ int get_right_side_direction_semaphores( char char_dir){
     switch (char_dir) {
         case 'N':
             index = 0;
-            printf("R get %d\n" , index);
             sem_right_side_direction = sem_open(SEM_NORTH, O_RDWR);
             break;
         case 'W':
             index = 1;
-            printf("R get %d\n" , index);
             sem_right_side_direction = sem_open(SEM_WEST, O_RDWR);
             break;
         case 'S':
             index = 2;
-            printf("R get %d\n" , index);
             sem_right_side_direction = sem_open(SEM_SOUTH, O_RDWR);
             break;
         case 'E':
             index = 3;
-            printf("R get %d\n" , index);
             sem_right_side_direction = sem_open(SEM_EAST, O_RDWR);
             break;
         default:
@@ -329,14 +323,20 @@ void print_matrix(vector<vector<int>> matrix){
     printf("Train<pid%d>:\n" , ID);
     printf("Direction train: %c\n" , direction);
     printf("Right Side Direction train: %c\n", right_side_direction);
+    printf("{");
     for (int i = 0; i < matrix.size(); i++)
     {
+        printf("{");
         for (int j = 0; j < matrix[i].size(); j++)
         {
-            printf("%d ",  matrix[i][j]);
+            printf("%d",  matrix[i][j]);
+            if (j < 3) {
+                printf(",");
+            }
         }
-        printf("\n");
+        printf("} , \n");
     }
+    printf("};");
 }
 
 /************************************************************************
@@ -385,7 +385,7 @@ void update_matrix(int i ,int j , int value){
     
     close_output_file();
     
-    print_matrix(matrix);
+//    print_matrix(matrix);
     sem_post(sem_matrix);
     
 }
@@ -410,32 +410,41 @@ int main(int argc, const char * argv[]) {
     get_semaphores();
     
     // waits direction semaphore
-    printf("Train<pid%d>: %s Started\n" , ID, train_info[index_direction].c_str());
+    printf("Train<pid%d>: %s Train Started\n" , ID, train_info[index_direction].c_str());
     
     // request for direction lock
     printf("Train<pid%d>: requests for %s \n", ID, lock_info[index_direction].c_str());
+    
+    // upadte matrix
     update_matrix(ID - 1, index_direction, 1);
     
     sem_wait(sem_direction);
     // acquire for direction lock
     printf("Train<pid%d>: acquires for %s\n", ID, lock_info[index_direction].c_str());
+    
+    // upadte matrix
     update_matrix(ID - 1, index_direction, 2);
     
 
     // request for right side lock
     printf("Train<pid%d>: requests for %s \n", ID, lock_info[index_right_side_direction].c_str());
+    
+    // upadte matrix
     update_matrix(ID - 1, index_right_side_direction, 1);
     
     // acquire for direction lock
     sem_wait(sem_right_side_direction);
+    
+    // upadte matrix
     update_matrix(ID - 1, index_right_side_direction, 2);
     printf("Train<pid%d>: acquires for %s\n", ID, lock_info[index_right_side_direction].c_str());
     
     // request for junction lock
     printf("Train<pid%d>: requests Junction_Lock\n", ID);
+    
     sem_wait(sem_junction);
     printf("Train<pid%d>: Acquires Junction_Lock; Passing Junction\n", ID);
-    sleep(3);
+    sleep(2);
     
     
     // release junction lock
@@ -445,11 +454,15 @@ int main(int argc, const char * argv[]) {
     // release direction lock
     printf("Train<pid%d>: releases %s\n", ID, lock_info[index_direction].c_str());
     sem_post(sem_direction);
+    
+    // upadte matrix
     update_matrix(ID - 1, index_direction, 0);
 
     // release right side direction lock
     printf("Train<pid%d>: releases %s\n", ID, lock_info[index_right_side_direction].c_str());
     sem_post(sem_right_side_direction);
+    
+    // upadte matrix
     update_matrix(ID - 1, index_right_side_direction, 0);
     
     

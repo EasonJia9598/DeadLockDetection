@@ -25,6 +25,10 @@
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <vector>
+#include <tuple>
+#include <stack>
+#include <map>
 
 /************************************************************************************
  
@@ -76,6 +80,22 @@ sem_t *sem_west;
 sem_t *sem_south;
 sem_t *sem_east;
 
+// check deadlock parameters
+int V, E;
+int n;
+
+//带权有向图
+map<int, vector<tuple<int , int , double>>> EWD;
+
+bool marked[100];   // v 是否已经被访问过？
+bool onStack[100];  // v 是否在栈里？
+tuple<int , int , double> edgeTo[100]; // 到达顶点 v 的最后一条边
+stack<tuple<int , int , double>> cycle[100];    // 有向环
+
+// train info
+string train_info[4] = {"North" , "West" , "South" , "East"};
+
+
 /************************************************************************
  
  
@@ -83,6 +103,99 @@ sem_t *sem_east;
  
  
  *************************************************************************/
+/************************************************************************
+ 
+ Function:        num_2_char
+ 
+ Description:     change number to char for passing value in pipe
+ 
+ *************************************************************************/
+
+
+char const* num_2_char(int n ){
+    std::string s = std::to_string(n);
+    char const *pchar = s.c_str();
+    return pchar;
+}
+
+/************************************************************************
+ 
+ Function:        split
+ 
+ Description:     spilt line into elements
+ 
+ *************************************************************************/
+
+
+std::vector<std::string> &split(const std::string &s, char delim, std::vector<std::string> &elems) {
+    std::stringstream ss(s);
+    std::string item;
+    while(std::getline(ss, item, delim)) {
+        elems.push_back(item);
+    }
+    return elems;
+}
+// https://stackoverflow.com/questions/275404/splitting-strings-in-c
+
+
+/************************************************************************
+ 
+ Function:        arrayConvert
+ 
+ Description:     convert string to array
+ 
+ *************************************************************************/
+
+vector<int> arrayConvert(string content){
+    
+    vector<int> array;
+    vector<string> numbers ;
+    split(content, ' ', numbers);
+    int i = 0;
+    for(string n : numbers){
+        stringstream geek(n);
+        geek >> i;
+        array.push_back(i);
+    }
+    return array;
+}
+//https://www.geeksforgeeks.org/converting-strings-numbers-cc/
+
+/************************************************************************
+ 
+ Function:        readContent
+ 
+ Description:     read content from file
+ 
+ *************************************************************************/
+
+vector<vector<int>> readContent(string filename){
+    string content;
+    string line;
+    ifstream myfile (filename);
+    vector<vector<int>> array;
+    
+    if (myfile.is_open()) {
+        while (getline(myfile,line)) {
+            array.push_back(arrayConvert(line));
+        }
+    }
+    myfile.close();
+    return array;
+}
+
+
+/************************************************************************
+ 
+ Function:        processFile
+ 
+ Description:     read file and store in array
+ 
+ *************************************************************************/
+
+vector<vector<int>> processFile(string filename){
+    return readContent(filename);
+}
 
 /************************************************************************
  
@@ -156,10 +269,18 @@ void initialize_matrix(){
  
  *************************************************************************/
 void unlink_semaphores(bool detect_failed){
+    sem_unlink(SEM_JUNCTION);
+    sem_unlink(SEM_READ_MATRIX);
+    sem_unlink(SEM_NORTH);
+    sem_unlink(SEM_WEST) ;
+    sem_unlink(SEM_SOUTH) ;
+    sem_unlink(SEM_EAST);
+    
     if (sem_unlink(SEM_JUNCTION) && sem_unlink(SEM_READ_MATRIX) &&
         sem_unlink(SEM_NORTH) && sem_unlink(SEM_WEST) &&
         sem_unlink(SEM_SOUTH) && sem_unlink(SEM_EAST)){
         if(detect_failed)perror("sem_unlink(3) failed");
+
     }
     
 }
@@ -175,7 +296,7 @@ void unlink_semaphores(bool detect_failed){
 
 
 void create_name_semaphore(){
-    unlink_semaphores(true);
+//    unlink_semaphores(true);
     // initialize basic semaphores
     /* We initialize the semaphore counter to 1 (INITIAL_VALUE) */
      sem_junction = sem_open(SEM_JUNCTION, O_CREAT | O_EXCL, SEM_PERMS, INITIAL_VALUE);
@@ -190,32 +311,239 @@ void create_name_semaphore(){
         perror("sem_open(3) error");
         exit(EXIT_FAILURE);
     }
+
+
+}
+
+/************************************************************************
+ 
+ Function:        print_matrix
+ 
+ Description:     print_matrix
+ 
+ *************************************************************************/
+void print_matrix(vector<vector<int>> matrix){
+    printf("--------------------------------------------------\n");
+    printf("            Semaphores          \n");
+    printf("             North   West    South   East    \n");
+    printf("--------------------------------------------------\n");
+
+    for (int i = 0; i < matrix.size(); i++)
+    {
+        printf("Train<pid%d>    {" , i + 1);
+        for (int j = 0; j < matrix[i].size(); j++)
+        {
+            printf("%d",  matrix[i][j]);
+            if (j < 3) {
+                printf(",");
+            }
+        }
+        printf("} , \n");
+    }
+    printf("\n");
+}
+
+/************************************************************************
+ 
+ Function:        dfs
+ 
+ Description:     dfs
+ 
+ *************************************************************************/
+void dfs(int v) {
+    onStack[v] = true;
+    marked[v] = true;
     
-    /* Close the semaphore as we won't be using it in the parent process */
-    if (sem_close(sem_junction) < 0 && sem_close(sem_matrix) < 0 && sem_close(sem_north) < 0 && sem_close(sem_west) < 0 && sem_close(sem_south) < 0 && sem_close(sem_east) < 0) {
-        perror("sem_close(3) failed");
-        /* We ignore possible sem_unlink(3) errors here */
-        unlink_semaphores(false);
-        exit(EXIT_FAILURE);
+    for(vector<tuple<int, int, double>>::iterator ii = EWD[v].begin(); ii != EWD[v].end(); ii++)
+    {
+        
+        int w = get<1>(*ii);
+        
+        if(!marked[w]) {    // 遇见没访问过的顶点继续dfs递归
+            edgeTo[w] = *ii;
+            dfs(w);
+        }
+        else if(onStack[w]) {   // 遇见一个访问过的顶点，并且该顶点在栈里说明发现了一个新环
+            tuple<int, int, double> f = *ii;
+            while(get<0>(f) != w) {
+                cycle[n].push(f);
+                f = edgeTo[get<0>(f)];
+            }
+            
+            cycle[n].push(f);
+            n++;
+            return ;
+            
+        }
+    }
+    
+    onStack[v] = false;
+}
+
+void show_data() {
+    cout << "EdgeWeightedDigraph : " << endl;
+    for(int v = 0; v < V; v++)
+    {
+        cout << v << " : ";
+        for(vector<tuple<int, int, double>>::iterator ii = EWD[v].begin(); ii != EWD[v].end(); ii++)
+            cout << get<0>(*ii) << "->" << get<1>(*ii) << " " << get<2>(*ii) << " ";
+        cout << endl;
     }
 }
 
 
+/************************************************************************
+ 
+ Function:        find_cycle
+ 
+ Description:    find cycle in graph
+ *************************************************************************/
+
+void find_cycle() {
+    for(int v = 0 ; v < V; v++)
+        if(!marked[v]) dfs(v);
+}
+
+/************************************************************************
+ 
+ Function:        show_cycle
+ 
+ Description:     show found cycle
+ 
+ *************************************************************************/
+void show_cycle() {
+    int detect_deadlock_flag = 0;
+    for(int i = 0 ; i < n;i++)
+    {
+        int index = 0;
+        string train_info_first;
+        int index_first = 0 ;
+        if(!cycle[0].empty()) detect_deadlock_flag = 1;
+        if (detect_deadlock_flag) {
+            detect_deadlock_flag = 1;
+             printf("*************************************************\n\n");
+            printf(" DeadLock detected!!!!!!!\n\n");
+            printf("*************************************************\n\n");
+
+        }
+        
+        while(!cycle[i].empty()) {
+            tuple<int, int, double> f = cycle[i].top();
+            
+            if (get<2>(f) == 2) {
+                
+                printf("-Train<pid%d> from %s " , get<1>(f) - 3, train_info[get<0>(f)].c_str());
+                
+                if (index != 0) {
+                    printf("\n");
+                }
+                if (index == 0) {
+                    index_first = get<1>(f) - 3;
+                    train_info_first = train_info[get<0>(f)];
+                    printf("is waiting for ");
+                }
+                
+                if (index!= 0){
+                    printf("-Train<pid%d> from %s " ,  get<1>(f)  - 3, train_info[get<0>(f)].c_str());
+                    
+                    printf("is waiting for "  );
+                }
+                index++;
+                
+            }
+            
+            cycle[i].pop();
+        }
+        printf("-Train<pid%d> from %s \n" ,index_first , train_info_first.c_str());
+        
+    }
+    
+    if (detect_deadlock_flag == 1) {
+//        printf("DeadLock detected!!!!!!!\n");
+        unlink_semaphores(false);
+        exit(1);
+    }
+}
+
+/************************************************************************
+ 
+ Function:        read_data
+ 
+ Description:     read_data from matrix.txt
+ 
+ *************************************************************************/
+
+void read_data() {
+    V = N + M;
+    
+    sem_wait(sem_matrix);
+    vector<vector<int>> array = readContent(matrix_file_path);
+    print_matrix(array);
+   
+    
+    
+    for(int i = 0 ; i < array.size(); i++){
+        for (int j = 0;j < array[i].size() ;j++) {
+            if (array[i][j] == 2) {
+                //                printf("j %d -> i %d\n" , j , i + 4 );
+                EWD[j].push_back(make_tuple(j, i+4, 2));
+                E++;
+            }else if (array[i][j] == 1) {
+                //                printf("i %d -> j %d\n" , i + 4 , j );
+                EWD[i+4].push_back(make_tuple(i+4, j, 1));
+                E++;
+            }
+        }
+    }
+    sem_post(sem_matrix);
+}
+
+
+/************************************************************************
+ 
+ Function:        check_deadlock
+ 
+ Description:     check_deadlock
+ 
+ *************************************************************************/
+void check_deadlock(){
+    read_data();
+    show_data();
+    find_cycle();
+    show_cycle();
+    EWD.clear();
+    for (int i = 0; i < 100; i++) {
+        marked[i] = false;
+        onStack[i] = false;
+        while (!cycle[i].empty()){
+            cycle[i].pop();
+        }
+    }
+
+}
 
 
 int main(int argc, const char * argv[]) {
     
-    /* Close the semaphore as we won't be using it in the parent process */
-    if (sem_close(sem_junction) < 0 && sem_close(sem_matrix) < 0 && sem_close(sem_north) < 0 && sem_close(sem_west) < 0 && sem_close(sem_south) < 0 && sem_close(sem_east) < 0) {
-        perror("sem_close(3) failed");
-        /* We ignore possible sem_unlink(3) errors here */
-        unlink_semaphores(false);
-        exit(EXIT_FAILURE);
-    }
+//   sem_close(sem_junction) ;
+//    sem_close(sem_matrix) ;
+//    sem_close(sem_north) ;
+//    sem_close(sem_west) ;
+//    sem_close(sem_south) ;
+//    sem_close(sem_east);
+
+    
+    float p = atof(argv[1]);
+    
+    srand((int)time(NULL));
+    
+    unlink_semaphores(false);
     
     // Read data from sequence.txt file
     string sequence_list = read_sequence_file(sequence_file_path);
+    
     N = (int)sequence_list.size();
+    
     printf("Number of trains = %d\n" , N);
     
     // output sequence content
@@ -231,51 +559,61 @@ int main(int argc, const char * argv[]) {
     
     // start creating child process
     pid_t pids[N];
-    int i ;
+    int i = 0;
     
-    for (i = 0; i < N ; i++) {
+    while(1){
         
         // TODO: check deadlock by probability
+        float r = (rand() % 10) / 10.0 ;
+        if (r < p) {
+            check_deadlock();
+        }else{
         
+            // ELSE: generate new train process
+            
         
-        // ELSE: generate new train process
-        
-        if ((pids[i] = fork()) < 0) {
-            perror("fork(2) failed");
-            exit(EXIT_FAILURE);
-        }
-        // generate pid from 1
-        std::string s = std::to_string(i + 1);
-        char const *PID = s.c_str();
-        
-        char d = sequence_list[i];
-        char const *direction = &d;
-//        sleep(3);
-        
-        if (pids[i] == 0) {
-            if (execl(CHILD_PROGRAM.c_str(), PID, direction, NULL) < 0) {
-                perror("execl(2) failed");
+            if ((pids[i] = fork()) < 0) {
+                perror("fork(2) failed");
                 exit(EXIT_FAILURE);
             }
             
+            
+            // generate pid from 1
+            std::string s = std::to_string(i + 1);
+            char const *PID = s.c_str();
+            
+            char d = sequence_list[i];
+            char const *direction = &d;
+
+            
+            if (pids[i] == 0) {
+                if (execl(CHILD_PROGRAM.c_str(), PID, direction, NULL) < 0) {
+                    perror("execl(2) failed");
+                    exit(EXIT_FAILURE);
+                }
+            }
+            i++;
         }
+        if (i >= N) break;
+        
     }
     
     int flag = 0;
     
     while (1) {
+        check_deadlock();
         if (wait(NULL) > 0)
             flag++;
-        
         if (flag >= N) {
             break;
         }
     }
     
     
+    
     unlink_semaphores(true);
     
 
-    
+
     return 0;
 }
