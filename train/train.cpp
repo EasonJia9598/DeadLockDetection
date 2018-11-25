@@ -217,7 +217,6 @@ void get_arguments(const char * argv[]){
     ID = atoi(argv[0]);
     direction = argv[1][0];
     right_side_direction = get_right_side_direction();
-    
 }
 
 /************************************************************************
@@ -436,10 +435,11 @@ int main(int argc, const char * argv[]) {
     get_semaphores();
     
     // waits direction semaphore
-    printf("Train<pid%d>: %s Train Started\n" , ID, train_info[index_direction].c_str());
+
+    printf("\nTrain<pid%d> successfully created and %s Train Started\n" , ID, train_info[index_direction].c_str());
     
     // request for direction lock
-    printf("Train<pid%d>: requests for %s \n", ID, lock_info[index_direction].c_str());
+    printf("\nTrain<pid%d>: requests for %s \n", ID, lock_info[index_direction].c_str());
     
     // upadte matrix
     update_matrix(ID - 1, index_direction, 1);
@@ -447,14 +447,14 @@ int main(int argc, const char * argv[]) {
     sem_wait(sem_direction);
     
     // acquire for direction lock
-    printf("Train<pid%d>: acquires for %s\n", ID, lock_info[index_direction].c_str());
+    printf("\nTrain<pid%d>: acquires for %s\n", ID, lock_info[index_direction].c_str());
     
     // upadte matrix
     update_matrix(ID - 1, index_direction, 2);
     
 
     // request for right side lock
-    printf("Train<pid%d>: requests for %s \n", ID, lock_info[index_right_side_direction].c_str());
+    printf("\nTrain<pid%d>: requests for %s \n", ID, lock_info[index_right_side_direction].c_str());
     
     // upadte matrix
     update_matrix(ID - 1, index_right_side_direction, 1);
@@ -464,29 +464,29 @@ int main(int argc, const char * argv[]) {
     
     // upadte matrix
     update_matrix(ID - 1, index_right_side_direction, 2);
-    printf("Train<pid%d>: acquires for %s\n", ID, lock_info[index_right_side_direction].c_str());
+    printf("vTrain<pid%d>: acquires for %s\n", ID, lock_info[index_right_side_direction].c_str());
     
     // request for junction lock
-    printf("Train<pid%d>: requests Junction_Lock\n", ID);
+    printf("\nTrain<pid%d>: requests Junction_Lock\n", ID);
     
     sem_wait(sem_junction);
-    printf("Train<pid%d>: Acquires Junction_Lock; Passing Junction\n", ID);
+    printf("\nTrain<pid%d>: Acquires Junction_Lock; Passing Junction\n", ID);
     sleep(2);
     
     
     // release junction lock
-    printf("Train<pid%d>: releases Junction_Lock\n", ID);
+    printf("\nTrain<pid%d>: releases Junction_Lock\n", ID);
     sem_post(sem_junction);
     
     // release direction lock
-    printf("Train<pid%d>: releases %s\n", ID, lock_info[index_direction].c_str());
+    printf("\nTrain<pid%d>: releases %s\n", ID, lock_info[index_direction].c_str());
     sem_post(sem_direction);
     
     // upadte matrix
     update_matrix(ID - 1, index_direction, 0);
 
     // release right side direction lock
-    printf("Train<pid%d>: releases %s\n", ID, lock_info[index_right_side_direction].c_str());
+    printf("\nTrain<pid%d>: releases %s\n", ID, lock_info[index_right_side_direction].c_str());
     sem_post(sem_right_side_direction);
     
     // upadte matrix

@@ -276,13 +276,6 @@ void unlink_semaphores(bool detect_failed){
     sem_unlink(SEM_SOUTH) ;
     sem_unlink(SEM_EAST);
     
-    if (sem_unlink(SEM_JUNCTION) && sem_unlink(SEM_READ_MATRIX) &&
-        sem_unlink(SEM_NORTH) && sem_unlink(SEM_WEST) &&
-        sem_unlink(SEM_SOUTH) && sem_unlink(SEM_EAST)){
-        if(detect_failed)perror("sem_unlink(3) failed");
-
-    }
-    
 }
 
 /************************************************************************
@@ -420,8 +413,6 @@ void find_cycle() {
 bool show_cycle() {
     bool exit_flag = false;
     
-    show_data();
-    
     int detect_deadlock_flag = 0;
     
     for(int i = 0 ; i < n ; i++)
@@ -436,6 +427,12 @@ bool show_cycle() {
             printf("*************************************************\n\n");
             printf(" DeadLock detected!!!!!!!\n\n");
             printf("*************************************************\n\n");
+            show_data();
+            printf("*************************************************\n\n");
+            printf("*************************************************\n\n");
+            printf(" Deadlock Summary :\n\n");
+            printf("*************************************************\n\n");
+            
 
         }
         
@@ -444,6 +441,7 @@ bool show_cycle() {
         // when cycle is not empty, then we found a deadlock cycle
         while(!cycle[i].empty()) {
             
+
             tuple<int, int, double> f = cycle[i].top();
             string first_string, second_string;
             
@@ -513,7 +511,7 @@ bool show_cycle() {
         // link back to the front complete cycle
         printf("-Train<pid%d> from %s \n" ,index_first , train_info_first.c_str());
         printf("\n\n*************************************************\n\n");
-        printf("RAG grahp : \n");
+        printf("RAG graph : \n");
         printf("\n\n*************************************************\n\n");
 
         for(string item : string_cycle){
@@ -569,6 +567,7 @@ void read_data() {
  
  *************************************************************************/
 bool check_deadlock(){
+    
     printf("\n\n*************************************************\n\n");
     printf("Check For DeadLock : \n");
     printf("\n\n*************************************************\n");
@@ -608,6 +607,7 @@ int main(int argc, const char * argv[]) {
 
     
     float p = atof(argv[1]);
+    printf("DeadLock detection probability is %d%%\n" , (int)(p * 100));
     
     srand((int)time(NULL));
     
@@ -642,7 +642,8 @@ int main(int argc, const char * argv[]) {
         
         if (r < p) {
             if(check_deadlock()){
-                for (int j = 0; j < i ; i++) {
+                printf("\n\ni < N !!\nDetected deadlock before forking all trains!!\n\n");
+                for (int j = 0; j < i ; j++) {
                     printf("kill children process (pid == %d)\n" , pids[j]);
                     if (pids[j] != 0) kill(pids[j], SIGTERM);
                 }
@@ -656,6 +657,7 @@ int main(int argc, const char * argv[]) {
                 perror("fork(2) failed");
                 exit(EXIT_FAILURE);
             }
+
             // generate pid from 1
             std::string s = std::to_string(i + 1);
             char const *PID = s.c_str();
@@ -681,6 +683,7 @@ int main(int argc, const char * argv[]) {
     while (1) {
         sleep(1);
         if(check_deadlock()){
+            printf("\n\ni == N!!\nDetected deadlock after forking all trains!!\n\n");
             for (int i = 0; i < N; i++) {
                 printf("kill children process (pid == %d)\n" , pids[i]);
                    kill(pids[i], SIGTERM);
